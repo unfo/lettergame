@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="UTF-8">
+        <title>The Letter Game</title>
+        <style>
+            body { font-family: sans-serif; }
+            table, td { border: 1px solid black; padding: 5px;}
+            td { height: 64px; width: 64px; text-align: center; text-transform: uppercase; }
+        </style>
+    </head>
+    <body>
+        <button id="lol">Letters</button><button id="rotate">rotate</button>
+        <div id="container"></div>
+    </body>
+    <script>
+        var eventTarget = null;
+        var letters = [
+            ['t','i','t','e'],
+            ['c','i','n','g'],
+            ['k','a','l','o'],
+            ['c','u','q','k'],
+        ];
+        var container = document.querySelector('#container');
+        
+        function drawLetters() {
+            let table = document.createElement('table');
+            letters.forEach(letter_row => {
+                let row = document.createElement('tr');
+                letter_row.forEach(letter => {
+                    let cell = document.createElement('td');
+                    cell.innerText = letter;
+                    row.appendChild(cell);
+                });
+                table.appendChild(row);
+            });
+            container.innerHTML = '';
+            container.appendChild(table);
+        }
+
+        function rotateBoard() {
+            let new_table = [
+                    ['','','','',],
+                    ['','','','',],
+                    ['','','','',],
+                    ['','','','',]
+                ];
+            letters.forEach((letter_row, row_index) => {
+                letter_row.forEach((letter, letter_index) => {
+                    new_table[letter_index][letter_row.length - row_index - 1] = letter;
+                });
+            })
+            letters = new_table;
+            drawLetters();
+        }
+
+        document.querySelector('#lol').addEventListener('click', function(event) { drawLetters(); });
+        document.querySelector('#rotate').addEventListener('click', (e) => { rotateBoard() });
+        
+    </script>
+</html>
