@@ -11,9 +11,13 @@
         </style>
     </head>
     <body>
+        <input type="file" id="dictionary" /><button id="readFile">read dictionary</button>
+        <button id="restoreDictionary">restore from storage</button> |
+        <button id="findWords">find all 3 letter words</button> |
         <button id="lol">Letters</button><button id="rotate">rotate</button><span id='currentWord'></span>
         <div id="container"></div>
     </body>
+    <script src="dictionary-processing.js" ></script>
     <script src="nodes-and-paths.js"></script>
     <script>
         var eventTarget = null;
@@ -21,15 +25,109 @@
         var wording = false;
         var current = [];
 
+
         var letters = [
-            ['t','i','t','e'],
-            ['c','i','n','g'],
-            ['k','a','l','o'],
-            ['c','u','q','k'],
+            ['h','v','s','i'],
+            ['e','n','o','t'],
+            ['v','e','i','s'],
+            ['w','t','b','s'],
         ];
 
         var nodes = makeNodes(letters);
         makeNetwork(nodes);
+
+        // there are (12 + 12 + 9 + 9) * 2 = 84 two-letter starter pairs minus duplicates
+        var pairs = calculateStartingPairs(nodes);
+        window.WORDS = [];
+        document.querySelector('#restoreDictionary').addEventListener('click', (e) => {
+            window.WORDS = JSON.parse(localStorage.getItem("lettergame-potentials"));
+            console.log('window.WORDS is now', window.WORDS.length, 'long'); 
+        });
+
+        function recursiveSearch(max_depth, current_path, dict, next_node) {
+            // console.log(current_path.length, current_path.toWord());
+            let current_word = "" + current_path.toWord();
+            if (current_path.length >= max_depth) {
+                // console.log("IF")
+                current_path = null;
+                if (dict.includes(current_word)) {
+                    // console.warn("FOUND WORD!", current_word);
+                    return current_word;
+                } else {
+                    // not found_words
+                    return [];
+                }
+            } else {
+                let n = current_word.length;
+                if (dict.find(w => { return w.substr(0, n) == current_word })) {
+                    // console.log("continuing because there may be a word...")
+                    let bigger_words = next_node.neighbors.map(neighbor => {
+                        let new_path = current_path.clone();
+                        if (new_path.add(neighbor)) {
+                            return recursiveSearch(max_depth, new_path, dict, neighbor)
+                        } else {
+                            return [];
+                        }
+                    }).flat().filter(w => { return w != undefined });
+                    if (dict.includes(current_word)) {
+                        // console.log("Current word was already a dict word!", current_word);
+                        return [current_word].concat(bigger_words).flat();
+                    } else {
+                        return [bigger_words].flat();
+                    }
+
+                } else {
+                    // console.log("Killing search because prefix does not match");
+                    return [];
+                }
+            }
+        }
+        function findWords(len=100) {
+            console.log('len=',len);
+            let wordset = (len <= 16) ? window.WORDS.filter(w => { return (w.length == len) })
+                                     : window.WORDS;
+            if (wordset.length == 0)
+                return [];
+            
+            let found_words = nodes.flat().map(node => {
+                let start_path = new Path(node);
+                // console.warn("Wordset size", wordset.length)
+                let found_words = recursiveSearch(len, start_path, wordset, node);
+                if (found_words != undefined) {
+                    found = found_words.flat();
+                    // console.warn("Total of ", found.length, "starting from ", node.letter);
+                    // console.log(found_words);
+                    return found;
+                } else {
+                    return [];
+                }
+            });
+            return found_words.flat().reduce((ws, w) => { return (ws.includes(w) ? ws : ws.concat(w)) }, []).sort((a,b) => {
+                return (a.length == b.length ? b - a : a.length - b.length );
+            });
+        }
+
+        
+        console.log("Current letter set has ", pairs.length, "starting pairs");
+        function calculateStartingPairs(nodes) {
+            if (nodes == undefined) {
+                console.log('wtf nodes = undefined');
+                return [];
+            } else {
+                return nodes.flat().map(node => {
+                    return node.neighbors.map(neigh => {
+                        return `${node.letter}${neigh.letter}`;
+                    });
+                }).flat().reduce((all, current) => {
+                    let uniq = [all].flat()
+                    if (!uniq.includes(current)) {
+                        uniq.push(current);
+                    }
+                    return uniq;
+                }).sort();
+
+            }
+        }
 
         function makeNodes(puzzle_4x4) {
             let rows = [];
@@ -73,24 +171,33 @@
 
         
 
-        // var container = document.querySelector('#container');
+        var container = document.querySelector('#container');
         
-        // function drawLetters() {
-        //     let table = document.createElement('table');
-        //     letters.forEach((letter_row, ri) => {
-        //         let row = document.createElement('tr');
-        //         letter_row.forEach((letter, li) => {
-        //             let cell = document.createElement('td');
-        //             cell.innerText = letter;
-        //             cell.addEventListener('click', (e) => { toggleWord(ri, li) });
-        //             cell.addEventListener('mouseenter', (e) => { moveto(ri, li) });
-        //             row.appendChild(cell);
-        //         });
-        //         table.appendChild(row);
-        //     });
-        //     container.innerHTML = '';
-        //     container.appendChild(table);
-        // }
+        function drawLetters() {
+            let table = document.createElement('table');
+            letters.forEach((letter_row, ri) => {
+                let row = document.createElement('tr');
+                letter_row.forEach((letter, li) => {
+                    let cell = document.createElement('td');
+                    cell.innerHTML = '<input class=ltrs len=1 length=1 size=1 type=text value=' + letter + ' data-row=' + ri + ' data-col=' + li + ' />';
+                    row.appendChild(cell);
+                });
+                table.appendChild(row);
+            });
+            container.innerHTML = '';
+            container.appendChild(table);
+            document.querySelectorAll('input.ltrs').forEach(inp => { inp.addEventListener('change', (e) => {
+                window.JW_FOO = e;
+                let input = e.target;
+                let row = input.dataset['row']; 
+                let col = input.dataset['col'];
+                let old_val = nodes[row][col].letter;
+                let new_val = input.value;
+                console.log(`Changing ${old_val} => ${new_val} at ${row},${col}`);
+                nodes[row][col].letter = new_val;
+            })});
+        }
+        
 
         // function rotateBoard() {
         //     let new_table = [
@@ -145,7 +252,7 @@
         //     }
         // }
 
-        // document.querySelector('#lol').addEventListener('click', function(event) { drawLetters(); });
+        document.querySelector('#lol').addEventListener('click', function(event) { drawLetters(); });
         // document.querySelector('#rotate').addEventListener('click', (e) => { rotateBoard() });
         
         

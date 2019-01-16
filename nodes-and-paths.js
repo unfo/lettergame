@@ -20,6 +20,13 @@ class Path {
         this.current = start;
         this.nodes = [start];
     }
+
+    clone() {
+        let copy = new Path(this.start);
+        copy.current = this.current;
+        copy.nodes = this.nodes.slice();
+        return copy;
+    }
     
     add(node) {
         if (this.nodes.includes(node)) {
@@ -41,5 +48,15 @@ class Path {
         let joined_path = this.nodes.reverse().map(node => { return node.letter; }).join(' -> ');
         let str = `Path<${joined_path}>`;
         return str;
+    }
+    toWord() {
+        // console.log('Path.toWord()', this);
+        let str = this.nodes.map(node => { return node.letter; }).join('');
+        // console.log('=> ', str);
+        return str;
+    }
+
+    get length() {
+        return this.nodes.length;
     }
 }
