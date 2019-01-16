@@ -102,9 +102,20 @@
                     return [];
                 }
             });
-            return found_words.flat().reduce((ws, w) => { return (ws.includes(w) ? ws : ws.concat(w)) }, []).sort((a,b) => {
+            let sorted_words = found_words.flat().reduce((ws, w) => { return (ws.includes(w) ? ws : ws.concat(w)) }, []).sort((a,b) => {
                 return (a.length == b.length ? b - a : a.length - b.length );
             });
+            let grouped_words = sorted_words.map((w) => { 
+                return [w.length, w] 
+            }).reduce((lens, arr) => { 
+                lens[arr[0]] = [arr[1]].concat(lens[arr[0]]); 
+                return lens; 
+            }, []);
+
+            return {
+                sorted: sorted_words,
+                grouped: grouped_words
+            }
         }
 
         
